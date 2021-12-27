@@ -1,0 +1,760 @@
+---
+title: "Práctica 2: Limpieza y análisis de datos"
+author: "Brais Rodriguez Martinez"
+date: "12 de diciembre de 2021"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  word_document: default
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+# Descripción del dataset
+El juego de datos seleccionado es el dataset de "Absenteeism at work" obtenido de la página web https://www.kaggle.com/kewagbln/absenteeism-at-work-uci-ml-repositiory. Éste incluye 21 atributos físicos, psicológicos y ciscunstanciales de 740 trabajadores que permiten realizar los estudios señalados en el apartado anterior.
+
+Se realiza la carga del fichero. Éste, está separado por ";", por lo que se debe especificar este separador. Por otra parte, se definen unas cabeceras más descriptivas:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cabeceras <- c("ID", "Razon.ausencia", "Mes", "Dia.semana", "Estacion", "Coste.transporte", 
+               "Distancia.hogar.trabajo", "Tiempo.servicio", "Edad", "Carga.trabajo.por.dia", 
+               "Objetivo", "Fallo.disciplinario", "Educacion", "Hijos", "Bebedor.social", 
+               "Fumador.social", "Mascotas", "Peso", "Altura", "IMC", "Horas.ausente")
+absentismo <- read.csv("./Absenteeism_at_work.csv", col.names = cabeceras, sep = ";", 
+                       encoding = "UTF-8")
+
+str(absentismo)
+```
+Una vez cargado, se verifica su estructura:
+
+**1. ID:**
+identificador único que recibe el trabajador.
+
+**2. Razon.ausencia:**
+identificador de la razón de la abstinencia. Sus posibles valores van de 1 a 28. Su significado se verá más adelante.
+
+**3. Mes:**
+número que identifica el mes del año en el que se produjo la ausencia.
+
+**4. Dia.semana:**
+número del día de la semana en el que se produjo la ausencia.
+
+**5. Estacion:**
+estación del año en la que se produjo la ausencia.
+
+**6. Coste.transporte:**
+cantidad de dinero que cuesta el transporte del hogar del trabajador al trabajo.
+
+**7. Distancia.hogar.trabajo:**
+distancia en km del hogar del trabajador al trabajo.
+
+**8. Tiempo.servicio:**
+tiempo que el trabajador dedica al servicio semanalmente.
+
+**9. Edad:**
+años que tiene el trabajador.
+
+**10. Carga.trabajo.por.dia:**
+minutos trabajador por día.
+
+**11. Objetivo:**
+objetivo del trabajador, sobre 100.
+
+**12. Fallo.disciplinario:**
+indicador booleano que informa si se ha producido un fallo disciplinario por la falta.
+
+**13. Educacion:**
+nivel de educación recibida por el trabajador.
+
+**14. Hijos:**
+número de hijos.
+
+**15. Bebedor.social:**
+indicador de si el trabajador es bebedor social o no.
+
+**16. Fumador.social:**
+indicador de si el trabajador es fumador social o no.
+
+**17. Mascotas:**
+número de mascotas.
+
+**18. Peso:**
+peso en kg del trabajador.
+
+**19. Altura:**
+altura en cm del trabajador.
+
+**20. IMC:**
+índice de masa corporal del trabajador.
+
+**21. Horas.ausente:**
+horas totales en las que el trabajador estuvo ausente.
+
+# Importancia y objetivos de los análisis.
+El problema a tratar es el estudio de las condiciones, tanto físicas como psicológicas o circunstanciales que provocan el absentismo laboral. De esta manera, se quiere observar si existen relaciones entre estas características y la ausencia mayor o menor del trabajador.
+
+
+Así, se quieren generar indicadores de relación entre los diferentes atributos para observar si existe dicha correlación. Por otra parte, también se quiere observar si hay ciertos patrones en las características de los trabajadores que provocan las ausencias, formando grupos de ausencias e identificándolos.
+
+
+Finalmente, sería interesante saber si un trabajador va a ausentarse o cuántas horas podría estar ausente a partir de todos sus datos.
+
+# Limpieza de los datos
+
+## Preprocesado de los datos
+Primeramente se adapta la columna de razón de ausencia, creando una nueva que defina con palabras la razón de la ausencia:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod <- absentismo
+
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 0] <- 
+  "Desconocido"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 1] <- 
+  "Enfermedad infecciosa y parasitaria"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 2] <- 
+  "Neoplasias"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 3] <- 
+  "Enfermedades de la sangre"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 4] <- 
+  "Enfermedades endocrinas, nutricionales y metabólicas"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 5] <- 
+  "Enfermedades y desórdenes mentales"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 6] <- 
+  "Enfermedades del sistema nervioso"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 7] <- 
+  "Enfermedades del ojo y anexos"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 8] <- 
+  "Enfermedades del oído y apófisis mastoides"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 9] <- 
+  "Enfermedades del sistema circulatorio"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 10] <- 
+  "Enfermedades del sistema respiratorio"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 11] <- 
+  "Enfermedades del sistema digestivo"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 12] <- 
+  "Enfermedades de la piel y tejido subcutáneo"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 13] <- 
+  "Enfermedades del sistema musculoesquelético y del tejido conectivo"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 14] <- 
+  "Enfermedades del sistema genitourinario"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 15] <- 
+  "Embarazo, parto y puerperio"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 16] <- 
+  "Ciertas condiciones que se originan en el período perinatal"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 17] <- 
+  "Malformaciones congénitas, deformaciones y anomalías cromosómicas"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 18] <- 
+  "Anomalías no identificadas"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 19] <- 
+  "Lesiones, intoxicaciones y otras por causas externas"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 20] <- 
+  "Causas externas de morbilidad y mortalidad"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 21] <- 
+  "Factores que influyen en la salud"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 22] <- 
+  "Seguimiento del paciente"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 23] <- 
+  "Consulta médica"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 24] <- 
+  "Donación de sangre"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 25] <- 
+  "Examen en laboratorio"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 26] <- 
+  "Ausencia no justificada"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 27] <- 
+  "Fisioterapia"
+absentismo.mod$Razon.ausencia.def[absentismo.mod$Razon.ausencia == 28] <- 
+  "Dentista"
+
+absentismo.mod$Razon.ausencia.def[is.na(absentismo.mod$Razon.ausencia.def)]
+
+head(absentismo.mod)
+```
+
+De la misma manera, se hace el mismo proceso para el mes, el día de la semana y la estación del año:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Mes.def[absentismo.mod$Mes == 0] <- "Desconocido"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 1] <- "Enero"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 2] <- "Febrero"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 3] <- "Marzo"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 4] <- "Abril"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 5] <- "Mayo"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 6] <- "Junio"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 7] <- "Julio"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 8] <- "Agosto"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 9] <- "Septiembre"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 10] <- "Octubre"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 11] <- "Noviembre"
+absentismo.mod$Mes.def[absentismo.mod$Mes == 12] <- "Diciembre"
+
+absentismo.mod$Mes.def[is.na(absentismo.mod$Mes.def)]
+
+absentismo.mod$Dia.semana.def[absentismo.mod$Dia.semana == 2] <- "Lunes"
+absentismo.mod$Dia.semana.def[absentismo.mod$Dia.semana == 3] <- "Martes"
+absentismo.mod$Dia.semana.def[absentismo.mod$Dia.semana == 4] <- "Miércoles"
+absentismo.mod$Dia.semana.def[absentismo.mod$Dia.semana == 5] <- "Jueves"
+absentismo.mod$Dia.semana.def[absentismo.mod$Dia.semana == 6] <- "Viernes"
+
+absentismo.mod$Dia.semana.def[is.na(absentismo.mod$Dia.semana.def)]
+
+absentismo.mod$Estacion.def[absentismo.mod$Estacion == 1] <- "Primavera"
+absentismo.mod$Estacion.def[absentismo.mod$Estacion == 2] <- "Verano"
+absentismo.mod$Estacion.def[absentismo.mod$Estacion == 3] <- "Otoño"
+absentismo.mod$Estacion.def[absentismo.mod$Estacion == 4] <- "Invierno"
+
+absentismo.mod$Estacion.def[is.na(absentismo.mod$Estacion.def)]
+
+head(absentismo.mod)
+```
+
+Se aplica el mismo proceso para el nivel de educación:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Educacion.def[absentismo.mod$Educacion == 1] <- "Instituto"
+absentismo.mod$Educacion.def[absentismo.mod$Educacion == 2] <- "Graduado"
+absentismo.mod$Educacion.def[absentismo.mod$Educacion == 3] <- "Post-graduado"
+absentismo.mod$Educacion.def[absentismo.mod$Educacion == 4] <- "Máster y doctor"
+
+absentismo.mod$Educacion.def[is.na(absentismo.mod$Educacion.def)]
+
+head(absentismo.mod)
+
+```
+
+Para futuros estudios, también sería interesante crear dos nuevas columnas que indican si el trabajador tiene hijos y otra que indica si el trabajador tiene mascotas:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Tiene.hijos[absentismo.mod$Hijos > 0] <- 1
+absentismo.mod$Tiene.hijos[absentismo.mod$Hijos == 0] <- 0
+
+absentismo.mod$Tiene.hijos[is.na(absentismo.mod$Tiene.hijos)]
+
+absentismo.mod$Tiene.mascotas[absentismo.mod$Mascotas > 0] <- 1
+absentismo.mod$Tiene.mascotas[absentismo.mod$Mascotas == 0] <- 0
+
+absentismo.mod$Tiene.mascotas[is.na(absentismo.mod$Tiene.mascotas)]
+
+head(absentismo.mod)
+
+```
+
+Con el objetivo de realizar las representaciones más claras, se crea una nueva columna que indica SÍ o NO dependiendo del indicador de las columnas booleanas:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Fallo.disciplinario.def[absentismo.mod$Fallo.disciplinario == 1] <- "SÍ"
+absentismo.mod$Fallo.disciplinario.def[absentismo.mod$Fallo.disciplinario == 0] <- "NO"
+
+absentismo.mod$Bebedor.social.def[absentismo.mod$Bebedor.social == 1] <- "SÍ"
+absentismo.mod$Bebedor.social.def[absentismo.mod$Bebedor.social == 0] <- "NO"
+
+absentismo.mod$Fumador.social.def[absentismo.mod$Fumador.social == 1] <- "SÍ"
+absentismo.mod$Fumador.social.def[absentismo.mod$Fumador.social == 0] <- "NO"
+
+absentismo.mod$Tiene.hijos.def[absentismo.mod$Tiene.hijos == 1] <- "SÍ"
+absentismo.mod$Tiene.hijos.def[absentismo.mod$Tiene.hijos == 0] <- "NO"
+
+absentismo.mod$Tiene.mascotas.def[absentismo.mod$Tiene.mascotas == 1] <- "SÍ"
+absentismo.mod$Tiene.mascotas.def[absentismo.mod$Tiene.mascotas == 0] <- "NO"
+
+head(absentismo.mod)
+```
+
+Por otra parte, con el objetivo de mantener el sentido de los datos, se pasa el atributo de carga de trabajo por día de minutos a horas, igual que otros atributos como Tiempo.servicio u Horas ausente:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Carga.trabajo.por.dia <- absentismo.mod$Carga.trabajo.por.dia/60
+
+summary(absentismo.mod$Carga.trabajo.por.dia)
+```
+
+## Discretización
+Para análisis próximos, se procede a discretizar la variable IMC para obtener los diferentes estados IMC de una persona:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod["Rango.IMC"] <- cut(absentismo.mod$IMC, breaks = c(0,18.5,25.0,30,40), 
+                               labels = c("Inferior", "Normal","Sobrepeso","Obeso"))
+
+head(absentismo.mod$Rango.IMC)
+```
+
+
+## Comprobación de elementos a cero o vacíos
+Se realiza un resumen de los datos para ver si, a priori, parecen correctos o no.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(absentismo.mod)
+absentismo.mod[is.na(absentismo.mod)]
+```
+A primera vista, parece que todos los datos son correctos. Además, tampoco hay ningún NA en éstos, por lo que no será necesario realizar correcciones sobre los mismos.
+
+## Comprobación de valores extremos
+Una vez analizados los atributos, interesaría saber si existen valores extremos en: Coste.transporte, Distancia.hogar.trabajo, Tiempo.servicio, Edad, Carga.trabajo.por.dia, IMC y Horas.ausente:
+
+Primeramente, Coste.trasporte:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot <- boxplot(absentismo.mod$Coste.transporte)
+boxplot$out
+```
+
+Se puede observar, en el caso del coste de transporte, hay 3 registros que muestran un valor extremo por arriba, concretamente 388. En este caso, no se considera un error, sino que es un valor real desviado de la media.
+
+
+Segundo, Distancia.hogar.trabajo:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot(absentismo.mod$Distancia.hogar.trabajo)
+```
+
+Para este caso se puede ver que no hay valores extremos, por lo que parece que todos los trabajadores viven en las cercanías de la oficina, ya que no hay ninguna distancia fuera de lo común.
+
+
+Por otra parte, Tiempo.servicio:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot <- boxplot(absentismo.mod$Tiempo.servicio)
+boxplot$out
+```
+
+Para Tiempo.servicio, el outlier es 29. Esto muestra que hay algunas personas que tienen mucha experiencia ya en la compañía, como podría ser algún jefe o director, por lo que no se considera un valor erróneo.
+
+
+Para el atributo Edad:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot <- boxplot(absentismo.mod$Edad)
+boxplot$out
+```
+
+Se observa el número 58 como un outlier por la parte superior, mostrando que hay una o varias personas de avanzada edad. Igual que los casos anteriores, se considera un valor dentro de lo normal, ya que una persona de esa edad puede seguir trabajando sin problema.
+
+Ahora, para el atributo Carga.trabajo.por.dia:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot <- boxplot(absentismo.mod$Carga.trabajo.por.dia)
+boxplot$out
+```
+
+En este caso ya hay más outliers por la parte superior. Se podrían llegar a considerar datos correctos. Aunque sea una cantidad de horas diarias dentro de lo normal, sería necesaria una investigación acerca del porqué están tan alejadas de la media; por ejemplo, es posible que se trabaje los 7 días de la semana y 6.3 horas al día se puede considerar una cifra inadecuada al superarse las 40 horas semanales.
+
+
+Pasando al atributo IMC:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot(absentismo.mod$IMC)
+```
+
+No se ha obtenido ningún outlier para IMC, lo que lleva a pensar que la forma física de los trabajadores es similar.
+
+
+Por último, el caso de Horas.ausente:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+boxplot <- boxplot(absentismo.mod$Horas.ausente)
+boxplot$out
+```
+
+En este último caso hay bastantes outliers y todos muy variados. Todos ellos son valores correctos ya que no se salen de la realidad, pero en el entorno de la compañía sería necesario ver las razones de las ausencias.
+
+
+# Análisis de los datos
+## Selección de los grupos de datos a analizar
+A primera vista, los factores de la estación del año y el rango IMC en el que se encuentra el trabajador pueden ser indicadores críticos que causan ausencias de mayor o menor medida. Por otra parte, por si fuese necesario en futuros análisis, se quiere agrupar a los trabajadores por nivel de educación.
+
+### Agrupación por nivel de educación
+Los niveles de educación del dataset son "Graduado", "Instituto", "Máster y doctor" y "Post-graduado":
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(factor(absentismo.mod$Educacion.def))
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod.graduado <-
+absentismo.mod[absentismo.mod$Educacion.def == "Graduado",]
+absentismo.mod.instituto <-
+absentismo.mod[absentismo.mod$Educacion.def == "Instituto",]
+absentismo.mod.masterdoctor <-
+absentismo.mod[absentismo.mod$Educacion.def == "Máster y doctor",]
+absentismo.mod.postgraduado <-
+absentismo.mod[absentismo.mod$Educacion.def == "Post-graduado",]
+```
+
+### Agrupación por estación del año
+Por otra parte, las estaciones son "Primavera", "Verano", "Otoño" e "Invierno":
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(factor(absentismo.mod$Estacion.def))
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod.primavera <-
+absentismo.mod[absentismo.mod$Estacion.def == "Primavera",]
+absentismo.mod.verano <-
+absentismo.mod[absentismo.mod$Estacion.def == "Verano",]
+absentismo.mod.otonho <-
+absentismo.mod[absentismo.mod$Estacion.def == "Otoño",]
+absentismo.mod.invierno <-
+absentismo.mod[absentismo.mod$Estacion.def == "Invierno",]
+```
+
+
+### Agrupación por rango de IMC
+Finalmente, entre los rangos de IMC se distinguen "Inferior", "Normal", "Sobrepeso" y "Obesidad":
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(factor(absentismo.mod$Rango.IMC))
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod.inferior <-
+absentismo.mod[absentismo.mod$Rango.IMC == "Inferior",]
+absentismo.mod.normal <-
+absentismo.mod[absentismo.mod$Rango.IMC == "Normal",]
+absentismo.mod.sobrepeso <-
+absentismo.mod[absentismo.mod$Rango.IMC == "Sobrepeso",]
+absentismo.mod.obesidad <-
+absentismo.mod[absentismo.mod$Rango.IMC == "Obeso",]
+```
+
+
+## Comprobación de la normalidad y homogeneidad de la varianza
+A continuación, se va a comprobar la normalidad de los distintos atributos numéricos que se han destacado hasta ahora:
+
+Primeramente, Coste.trasporte:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Coste.transporte)
+```
+
+Segundo, Distancia.hogar.trabajo:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Distancia.hogar.trabajo)
+```
+
+Por otra parte, Tiempo.servicio:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Tiempo.servicio)
+```
+
+Para el atributo Edad:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Edad)
+```
+
+Ahora, para el atributo Carga.trabajo.por.dia:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Carga.trabajo.por.dia)
+```
+
+Pasando al atributo IMC:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$IMC)
+```
+
+Por último, Horas.ausente:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+shapiro.test(absentismo$Horas.ausente)
+```
+
+Ninguno de los atributos estudiados sigue una distribución normal ya que el test de shapiro ha obtenido unos p-value inferiores al nivel de significancia, es decir, de 0.05.
+
+
+Una vez comprobada la normalidad de los atributos, toca comprobar si existe homocedasticidad:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+fligner.test(Distancia.hogar.trabajo ~ Coste.transporte, data = absentismo.mod)
+```
+
+Se comprueba que no se verifica la hipótesis nula, es decir, la varianza no es la misma ya que el p-value es inferior al nivel de significancia 0.05.
+
+# Pruebas estadísticas
+## Matriz de correlaciones
+Es importante ver las correlaciones entre la diversas variables vistas:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.cor <- cor(absentismo.mod[,c(c(2:21))])
+round(absentismo.cor, 2)
+```
+
+Se instala el paquete corrplot para representar de forma gráfica la correlación entre los atributos del dataset:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+if (!require('corrplot')) install.packages('corrplot'); library('corrplot')
+
+corrplot(absentismo.cor, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+Con esta representación se contesta a una de las preguntas planteadas para el análisis: comprobar si existe relación entre las características físicas y circunstanciales de los empleados y las ausencias. Las razones y las horas de la ausencia, en este contexto, no parecen ser factores que se vean afectados en gran medida por ninguna característica de las recopiladas en el dataset. De todas maneras sí puede verse relación entre el coste del transporte y el número de hijos y mascotas, entre el IMC del trabajador con su edad y el indicador de bebedor, y éste a su vez con el tiempo de servicio y la distancia del hogar al trabajo.
+
+Así, no se ha podido averiguar si algunas de las características mostradas afecta más o menos a las ausencias, pero sí se han descubierto otras relaciones a las que habría que prestar atención si se muestra interés por la salud de los trabajadores, como la relación entre el IMC con la edad y el alcoholismo.
+
+
+## Modelo supervisado: árbol de decisión
+A través de la matriz de correlación no ha sido posible ver las relaciones entre las ausencias y las diferentes características, por lo que se va a crear un árbol de decisión para intentar observar qué atributos son los que más se tienen en cuenta. Para ello, se va a crear una nueva variable de clasificación de horas de ausencia "Nivel.ausencia", que etiqueta las ausencias como 1, considerándose como "Corta/Nula" y que abarca entre 0 y 2 horas de ausencia; como 2, considerándose como "Media" y que abarca entre 2 horas y una jornada de 7 horas, y finalmente más de 7 horas se considera como una ausencia de larga duración, casi al nivel de una baja laboral:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.mod$Nivel.ausencia <- cut(absentismo.mod$Horas.ausente, 
+                                     breaks = c(-1,2,7,120), labels = c(1, 2, 3))
+
+absentismo.mod$Nivel.ausencia <- as.factor(absentismo.mod$Nivel.ausencia)
+
+summary(absentismo.mod$Nivel.ausencia)
+```
+
+Para crear el árbol de decisión, primero se divide el dataset en las columnas independientes y el objetivo, en este caso el atributo Nivel.ausencia. Se han escogido la razón de la ausencia, el mes, el día de la semana, el coste de transporte, la distancia del hogar al trabajo, el tiempo de servicio, la carga de trabajo por día, si es bebedor social, el IMC y la edad como los atributos que más podrían afectar a la duración de las ausencias:
+```{r message= FALSE, warning=FALSE}
+set.seed(666)
+y <- absentismo.mod[,c("Nivel.ausencia")] 
+X <- absentismo.mod[,c("Razon.ausencia", "Mes", "Dia.semana", 
+                       "Coste.transporte", "Distancia.hogar.trabajo", 
+                       "Tiempo.servicio", "Carga.trabajo.por.dia", 
+                       "Bebedor.social", "IMC", "Edad")]
+```
+
+Con el dataset dividido entre las variables que van a realizar la predicción y la variable objetivo, se dividen ambas muestras en training y test con una proporción del 75% para training y un 25% para test. De esta manera, el árbol será creado con el 75% de los datos y se probará con el 25% restante.
+```{r message= FALSE, warning=FALSE}
+split_prop <- 3 
+max_split<-floor(nrow(X)/split_prop)
+tr_limit <- nrow(X)-max_split
+ts_limit <- nrow(X)-max_split+1
+
+trainX <- X[1:tr_limit,]
+trainy <- y[1:tr_limit]
+testX <- X[ts_limit+1:nrow(X),]
+testy <- y[ts_limit+1:nrow(X)]
+```
+
+Y se ejecuta un summary de las muestras para comprobar si son más o menos parecidas:
+```{r message= FALSE, warning=FALSE}
+summary(trainX);
+summary(trainy)
+summary(testX)
+summary(testy)
+```
+
+Como se puede ver, los datos son muy similares entre las muestras, por lo que podemos asumir que están bien distribuídos.
+
+Para poder crear el árbol de decisión, es necesario importar el paquete C50:
+```{r message= FALSE, warning=FALSE}
+if(!require(C50)){
+    install.packages('C50', repos='http://cran.us.r-project.org')
+    library(C50)
+}
+```
+
+Con las muestras de train y test listas, se procede a la creación del modelo de árbol de decisión:
+```{r message= FALSE, warning=FALSE}
+model <- C50::C5.0(trainX, trainy, rules=TRUE )
+summary(model)
+```
+
+Una vez obtenidas las reglas, se comentan en detalle:
+
+* Regla 1: las ausencias por razones desconocidas serán cortas o sin ausencia con un 97.1%.
+
+* Regla 2: las ausencias por asistencias a consulta (23) en trabajadores con una edad de 34 años o inferior serán cortas o sin ausencia conun 68.6%.
+
+* Regla 3: aquellas ausencias por asistencia a consulta, al dentista, al fisioterapeuta, al laboratorio, por donación de sangre o que no estén justificadas, serán cortas con una confianza del 50.6%.
+
+* Regla 4: con un 85.7% de confianza, las ausencias por asistencias a consulta, fisioterapia, laboratorio, donación de sangre o que no están justificadas, de trabajadores cuyo coste de transporte es igual o superior a 189, un tiempo de servicio mayor que 12, una carga de trabajo por día entre 3.99 y 4.35 horas, un IMC considerado obesidad y una edad entre 34 y 43 años, serán de duración próxima a una jornada laboral.
+
+* Regla 5: con un 81.5% de confianza, las ausencias por asistencias a consulta, dentista, fisioterapia, donaciones de sangre, a laboratorio o no justificadas y una edad de 35 o 36 años serán de duración próxima a una jornada laboral.
+
+* Regla 6: las ausencias por las razones nombradas en la anterior regla, en los meses de junio a diciembre, con un tiempo de servicio menor o igual a 12, una carga de trabajo por dia superior a 3.94 horas y una edad superior a 34 años serán de duración media con un 80.6% de seguridad.
+
+* Regla 7: si el coste de transporte de un trabajador que se ausenta es igual o menor que 118, la carga de trabajo es inferior o igual a 3.94 y su edad es igual o inferior a 43 años, su ausencia será de larga duración con un 80% de confianza.
+
+* Regla 8: si la razón de ausencia es por asistencia al dentista, fisioterapeuta, laboratorio o no está justificada y el IMC es superior a 32, la duración será de larga duración con un 80% de confianza.
+
+* Regla 9: si la razón de la ausencia no es una de las nombradas en la regla 6, la ausencia será de larga duración con un 79.2% de seguridad.
+
+* Regla 10: si el coste de transporte es superior a 248, la distancia del hogar al trabajo es inferior o igual a 42 y la edad es inferior o igual a 34, la duración será de larga duración con un 70.2% de confianza.
+
+Tras echar un vistazo a las reglas queda claro que la razón de la ausencia es un factor determinante para saber si la duración de la ausencia va a ser corta, media o larga. Por lo general, las razones que más se tienen en cuenta son las asistencias a la consulta, al dentista, al laboratorio, a sesiones de fisioterapia, a donaciones de sangre o simplemente no está justificada. Por otra parte, la edad también influye la cantidad de horas de ausencia, cuanto menor es la edad, mayor es la duración de la ausencia. El IMC también ejerce cierta influencia, corroborando que a IMCs altos mayor es el número de horas ausente.
+
+
+Una vez se ha creado el modelo del árbol de decisión, es buen momento para medir el porcentaje de aciertos de éste:
+```{r message= FALSE, warning=FALSE}
+predicted_model <- predict( model, testX, type="class" )
+mat_conf<-table(testy,Predicted=predicted_model)
+
+porcentaje_correct<-100 * sum(diag(mat_conf)) / sum(mat_conf)
+print(sprintf("El %% de registros correctamente clasificados es: %.4f %%",
+              porcentaje_correct))
+
+```
+
+Se obtiene un % de aciertos del 60.40%, al límite de lo que se podría considerar aceptable (>60%).
+
+
+Adicionalmente, se calcula la matriz de confusión para observar de manera más detallada el rendimiento del modelo. Para ello se usa el método CrossTable del paquete gmodels:
+```{r message= FALSE, warning=FALSE}
+if(!require(gmodels)){
+    install.packages('gmodels', repos='http://cran.us.r-project.org')
+    library(gmodels)
+}
+```
+
+Ahora, se crea la matriz de confusión:
+```{r message= FALSE, warning=FALSE}
+CrossTable(testy, predicted_model,prop.chisq  = FALSE, prop.c = FALSE, 
+           prop.r =FALSE,dnn = c('Reality', 'Prediction'))
+```
+
+Se puede observar que el 31% de las muestras han sido clasificadas con éxito como duración normal (1), el 1.6% como duración media (2) y el 27.8% como de larga duración. Por otra parte, se observa que la clasificación que mejor ha predecido ha sido la correspondiente a 3, habiendo predecido solamente un 3% como 1 y un 0.8% como 2. El árbol también ha tenido un rendimiento bueno clasificando la etiqueta 1, con un 3% de los casos clasificados como 2 y un 8% como 3. En cambio, para predecir los casos de duración media (2) ha tenido más dificultades, con un 14.3% de los casos clasificados como 1 y un 9% como 3.
+
+Las columnas que se han escogido para formar parte del modelo han sido cuidadosamente seleccionadas, combinadas y probadas para obtener el mayor porcentaje de aciertos, por lo que una solución general para mejorar el rendimiento del árbol sería aumentar el número de muestras totales, sobre todo aquellas con duraciones de ausencia medias, ya que se observó al principio de este apartado que ésta era la que menos filas tenía.
+
+## Creación de un modelo no supervisado
+Como modelo no supervisado se decide usar el algoritmo de kmeans para agrupar los registros de absentismo para formar poblaciones que permitan identificar a sus miembros por la similitud de sus características.
+
+Primeramente, se importa la librería de "cluster":
+```{r message= FALSE, warning=FALSE}
+if (!require('cluster')) install.packages('cluster'); library('cluster')
+```
+
+Antes de aplicar el algoritmo de kmeans sería interesante observar cómo se agrupan los datos de clientes:
+```{r message= FALSE, warning=FALSE}
+absentismo.clustering <- absentismo.mod[,c("Tiempo.servicio", "Edad", "IMC", 
+                                           "Horas.ausente")]
+
+plot(absentismo.clustering)
+```
+
+A primera vista, no parece que haya muchos grupos ya que los datos están bastante agrupados. Se podrían vislumbrar dos grupos echando un vistazo a la relación entre los diferentes atributos y Horas.ausente, correspondiéndose el de la izquierda a los trabajadores que tienen pocas horas de ausencia y el otro a los que tienen bastantes más.
+
+Para corroborar esta hipótesis, se ejecuta kmeans con diferentes números de agrupaciones para ver cuál puede ser la mejor:
+```{r message= FALSE, warning=FALSE}
+set.seed(1234)
+d <- daisy(absentismo.clustering) 
+resultados <- rep(0, 15)
+for (i in c(2,3,4,5,6,7,8,9,10,11,12,13,14,15))
+{
+  fit           <- kmeans(absentismo.clustering, i)
+  y_cluster     <- fit$cluster
+  sk            <- silhouette(y_cluster, d)
+  resultados[i] <- mean(sk[,3])
+}
+```
+
+
+A continuación, se representa el array de resultados, que contiene las medidas para cada implementación de kmeans. Cuanto mayor sea la medida quiere decir que el número de clústers seleccionados para esa implementación es mejor:
+```{r message= FALSE, warning=FALSE}
+plot(2:15,resultados[2:15],type="o",col="blue",pch=0,xlab="Número de clusters",
+     ylab="Silueta")
+which(resultados[2:15]==max(resultados[2:15]))+1
+resultados[which(resultados[2:15]==max(resultados[2:15]))+1]
+```
+
+En este caso, se obtiene que el número óptimo de clústers es 14, muy por encima de lo que se había visto en la primera representación.
+
+
+Para obtener unos resultados más fiables, se usa la función kmeansruns que ejecuta kmeans, para ello se instala el paquete "fpc".
+```{r message= FALSE, warning=FALSE}
+if (!require('fpc')) install.packages('fpc'); library('fpc')
+```
+
+Usando esta función, se calcula el número de clústers óptimos atendiendo a dos criterios: la silueta media ("asw") y Calinski-Harabasz ("ch").
+```{r message= FALSE, warning=FALSE}
+fit_ch  <- kmeansruns(absentismo.clustering, krange = 1:15, criterion = "ch") 
+fit_asw <- kmeansruns(absentismo.clustering, krange = 1:15, criterion = "asw") 
+```
+
+Y una vez se obtienen los resultados, se procede a comprobar el mejor resultado:
+```{r message= FALSE, warning=FALSE}
+plot(1:15,fit_ch$crit,type="o", col="blue", pch=0, xlab="Número de clústers", 
+     ylab="Criterio Calinski-Harabasz")
+plot(1:15,fit_asw$crit,type="o", col="blue", pch=0, xlab="Número de clústers", 
+     ylab="Criterio silueta media")
+
+which(fit_ch$crit==max(fit_ch$crit))
+which(fit_asw$crit==max(fit_asw$crit))
+```
+
+Parece que estos dos criterios tienen un pensamiento similar al propuesto en la primera representación, que además parece algo más lógico.
+
+Con estos datos acerca del número de clústers óptimos, se decide aplicar kmeans con 2 y 4 agrupaciones.
+
+Primeramente, se aplica kmeans con 2 clústers:
+```{r message= FALSE, warning=FALSE}
+cl2 <- kmeans(absentismo.clustering, 2)
+with(absentismo.clustering, pairs(absentismo.clustering, col=c(1:2)[cl2$cluster])) 
+```
+
+Con la representación del número de grupos, se realizan las siguientes observaciones:
+
+* Grupo 1: a primera vista, el grupo más poblado. Las edades, los tiempos de servicio y el IMC de los miembros de este grupo están bastante dispersos, pero se destaca que, con bastante diferencia, se agrupan en cifras muy bajas de horas de ausencia.
+
+* Grupo 2: es un grupo minoritario cuyos tiempos de servicio son medios, sus IMCs son medios-altos, sus edades dispersas y sus horas de ausencia son medias y altas.
+
+
+En el siguiente gráfico se pueden ver los clústers formados de una manera bastante clara:
+```{r message= FALSE, warning=FALSE}
+clusplot(absentismo.clustering, cl2$cluster, color=TRUE, shade=TRUE, labels=2, 
+         lines=0, main = "Clústers de trabajadores")
+```
+
+En este diagrama, se pueden observar a los dos grupos bien diferenciados. Como se comentaba, uno de ellos contiene más miembros y se extiende a lo largo de la componente 1, pero se mantiene en valores bajos de la componente 2. El otro, en cambio, tiene menos miembros y se mantiene en valores medios de cada componente.
+
+
+Una vez vista la aplicación de kmeans con 2 clústers, se procede a realizar la implementación de éste con 4:
+```{r message= FALSE, warning=FALSE}
+cl4 <- kmeans(absentismo.clustering, 4)
+with(absentismo.clustering, pairs(absentismo.clustering, col=c(1:4)[cl4$cluster])) 
+```
+
+A continuación, se describen las observaciones de los 4 grupos obtenidos en esta última representación:
+
+* Grupo 1: se corresponde a trabajadores jóvenes con un tiempo de servicio bajo y con IMC dentro de lo normal. En cuanto a las horas de ausencia, es un grupo cuyo tiempo ausente es muy bajo. Posiblemente sean trabajadores jóvenes que llevan poco tiempo en la empresa, pudiéndose ver que no es un incentivo para que falten más horas.
+
+* Grupo 2: son trabajadores que tienen un tiempo de servicio y una edad medias, cuyos IMCs están dentro de la normalidad y las horas de ausencia son muy bajas también, aunque muy ligeramente por encima del anterior grupo. Estos trabajadores se corresponden a los que ya tienen experiencia y llevan un tiempo en la empresa.
+
+* Grupo 3: el tiempo de servicio de los trabajadores de este grupo es similar al anterior y, en algunos casos, muy alto. Las edades, de la misma manera, también son más altas, y pocos IMC están dentro de los valores óptimos ya que la mayoría se sitúan en valores altos. Por el contrario, las horas de ausencia de este grupo son igualmente bajas. Probablemente sean los trabajadores más experimentados y que más tiempo llevan en la empresa, pero que no llevan vidas muy saludables.
+
+* Grupo 4: se corresponde al grupo con menos individuos. El tiempo de servicio de éstos es medio, las edades variadas y tienen IMC dentro de la normalidad, pero las horas de ausencia son medias y altas, por encima de los valores de otros trabajadores.
+
+
+Como se hizo anteriormente, se representan los clústers de manera bastante clara:
+```{r message= FALSE, warning=FALSE}
+clusplot(absentismo.clustering, cl4$cluster, color=TRUE, shade=TRUE, labels=2, 
+         lines=0, main = "Clústers de trabajadores")
+```
+
+Para este caso, se pueden observar los 4 grupos representados. De éstos, 3 de ellos se distribuyen a lo largo de la componente 1, mientras que el cuarto grupo está más centrado y se extiende casi uniformemente.
+
+Por último, simplemente se muestra el clusplot para los 14 clústers que se habían
+```{r message= FALSE, warning=FALSE}
+cl14 <- kmeans(absentismo.clustering, 14)
+clusplot(absentismo.clustering, cl14$cluster, color=TRUE, shade=TRUE, 
+         lines=0, main = "Clústers de trabajadores")
+```
+
+Para este último caso, se observa que ha dividido incluso más el grupo inferior e incluso ha dividido el grupo superior en dos grupos.
+
+Se puede observar que las dos primeras representaciones de clustering son similares: la primera tiene 2 agrupaciones y, aunque la segunda tenga 4, se vislumbra que es el grupo poblado del primer clustering el que se ha dividido para formar 3 grupos. Las diferencias principales son que el primer clustering hacía más diferencia entre los trabajadores que se ausentaban más horas y los que menos, mientras que el segundo se ha visto que tiene más en cuenta el tiempo de servicio, las edades y los IMC, además de las horas ausentes.
+
+
+Finalmente, se crea el dataset final. Se incluyen en él algunas de las nuevas columnas creadas, como Razon.ausencia.def y se quitan otras por no considerarse útiles para las siguientes fases, como Objetivo o Fallo.disciplinario, que no se han usado. A continuación, se muestra el dataset final con las columnas ordenadas:
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+absentismo.final <- absentismo.mod[,c("ID", "Razon.ausencia", "Razon.ausencia.def", 
+                                      "Mes.def", "Mes", "Dia.semana.def", "Dia.semana", 
+                                      "Estacion.def", "Coste.transporte", "Distancia.hogar.trabajo",
+                                      "Tiempo.servicio", "Carga.trabajo.por.dia", "Educacion", 
+                                      "Educacion.def", "Hijos", "Tiene.hijos", "Bebedor.social", 
+                                      "Fumador.social", "Mascotas", "Tiene.mascotas", "IMC", 
+                                      "Horas.ausente", "Edad", "Rango.IMC")]
+
+write.csv(absentismo.final, "Absenteeism_at_work_final.csv")
+```
+
+
+# Conclusiones
+A través de todo el informe visto, se han podido ver y contestar ciertos aspectos planteados al principio del mismo. Primeramente, se quería averiguar si había algún tipo de correlación entre las características físicas, circunstanciales y laborales del trabajador, entre ellas mismas y con el factor de las horas de ausencia y/o la razón de la misma. A primera vista, con este análisis no se ha visto una correlación fuerte entre dichas características, las horas de ausencia y la razón, pero sí se han descubierto otras relaciones que pueden ser muy importantes para garantizar la buena salud y la estabilidad del trabajador. Por una parte se ha visto que hay relación entre el coste del trasporte del trabajador y el número de hijos y mascotas, por lo que la empresa podría ofrecer bonos de transporte según estos factores. Por otra parte, existe una relación entre el IMC del trabajador con su edad y el indicador de si es bebedor o no, relacionado a su vez este último con el tiempo de servicio y la distancia del hogar al trabajo. Tal vez, es posible que en la empresa haya un ambiente que queme mentalmente a la gente poco a poco, descuidando su salud (valores de IMC altos) o recurriendo a la bebida (no necesariamente considerándolo alcoholismo). Por ello, sería interesante que la empresa estudiase otros factores que ahora mismo no están en este dataset y ponga atención a estos factores para evitar problemas de salud.
+
+
+Con un estudio más a fondo, que ha incluido un método supervisado de clasificación como es un árbol de decisión, se ha podido ver que la razón de la ausencia es un factor que afecta en gran medida a la duración de la ausencia, es decir, si va a ser una ausencia corta (menos de dos horas), media (entre 2 y 7 horas) o larga (más de 7 horas). También se ha podido ver que las razones más comunes son las visitas a la consulta, al dentista, por una cita para una muestra biológica, fisioterapia o análisis de sangre. En menor medida, la edad y el IMC son otros factores que también influyen en la magnitud de la ausencia: a mayor edad e IMC, mayor es la ausencia. Además, aparte de esta información que el árbol ha proporcionado, también se ha obtenido la capacidad de poder ver si un trabajador se va a ausentar poco o mucho según sus características. Globalmente, la eficacia del árbol ha alcanzado el 60.4%, una cifra aceptable.
+
+
+La necesidad de agrupar las ausencias por características similares se ha logrado tras aplicar el modelo no supervisado de clustering, usando kmeans. En el estudio se han obtenido 2 y 4 grupos, pero preferiblemente se pone el foco en los 4 grupos, ya que ofrecen más variedad. Estos grupos han atendido a la edad, el tiempo de servicio y el IMC por considerarse características físicas diferenciadoras. Esto ha permitido formar un grupo de trabajadores jóvenes y con tiempos de servicio bajos, aparentemente motivados, ya que han empezado hace poco y sus horas de ausencia son bajas; el segundo grupo recoge a trabajadores con edades y antigüedades medias, que también han visto aumentadas sus horas de ausencia; el tercero es similar al segundo, pero los IMCs de los trabajadores son altos, pudiendo ver que no llevan vidas muy saludables; y el cuarto, el menos poblado, el más variado y con horas de ausencia altas. Así, se tiene una visión de los distintos perfiles de trabajadores y ausencias hay, siendo útil para predecir futuras magnitudes de ausencia.
+
+
+```{r echo=TRUE, results = 'asis'}
+table_list<-data.frame(Contribuciones = character(0), Firma = character(0))
+
+table_list[nrow(table_list) + 1,] = c("Investigación previa", "Brais Rodríguez Martínez")
+
+table_list[nrow(table_list) + 1,] = c("Redacción de las respuestas", "Brais Rodríguez Martínez")
+
+table_list[nrow(table_list) + 1,] = c("Creación del código", "Brais Rodríguez Martínez")
+
+knitr::kable(table_list, format = "simple")
+```
